@@ -23,7 +23,6 @@
 - [Key Insights](#-key-insights)
 - [Key Results](#-key-results)
 - [Project Structure](#-project-structure)
-- [Lessons Learned](#-lessons-learned)
 - [Future Scope](#-future-scope)
 - [Deployment Note](#-deployment-note)
 
@@ -160,7 +159,7 @@ Full diagram and the persona/access-split rationale: [`diagrams/architecture.md`
 
 - `reserves_fact`: case reserve + IBNR at a `(claim, valuation_date)` grain — modeled as its own fact table since reserves are re-estimated periodically, not a static claim attribute
 - `reinsurance_cession_fact`: excess-of-loss and quota-share modeled with genuinely different formulas, since they pay out differently
-- `loss_ratio_mart` / `combined_ratio_mart`: aggregated independently (claims, then premiums, then joined by period) — an earlier row-level join version silently inflated the ratio by ~3-4x; see [Lessons Learned](#-lessons-learned)
+- `loss_ratio_mart` / `combined_ratio_mart`: incurred losses and earned premium are aggregated independently, then joined by period, so the ratio reflects true population-level totals
 
 ---
 
@@ -224,18 +223,6 @@ databricks-healthcare-finance-claims/
     ├── app.yaml
     └── requirements.txt
 ```
-
----
-
-## 🔍 Lessons Learned
-
-This project was built and debugged live against Databricks Free Edition. Several genuine platform quirks surfaced along the way — full detail in [`diagrams/architecture.md`](./diagrams/architecture.md), summarized here:
-
-- **Materialized views and streaming tables reject `ALTER TABLE`, `DESCRIBE DETAIL`, `SET MASK`, `SET ROW FILTER`, and `SHALLOW CLONE`** with "expects a table but is a view" errors. Fix: declare `CLUSTER BY` inside the `CREATE MATERIALIZED VIEW` statement itself, and embed masking/row-filter logic directly in the view's `SELECT` clause.
-- **A row-level join silently corrupted an aggregate metric.** An early `loss_ratio_mart` joined claims to premiums per-claim-row instead of aggregating each side independently — this fanned out and double-counted premium for members with multiple claims in a month, collapsing the loss ratio down to roughly *(avg claim / avg premium)* instead of a true population ratio. Fixed by aggregating in separate CTEs before joining on period.
-- **Streaming sources are append-only by contract** — a `DELETE` on a Bronze table feeding a Lakeflow streaming table requires a **Full Refresh All**, not an incremental run, to recover.
-- **A Databricks App runs as its own service principal**, not as the deploying user — it needs its own explicit Unity Catalog grants even when the deploying user already has full access.
-- **Databricks system table schemas vary by tier and change over time** — `system.query.history`'s warehouse ID is nested inside a `compute` struct; `system.compute.clusters` uses `auto_termination_minutes` and omits `node_type_id` on serverless-only tiers.
 
 ---
 
