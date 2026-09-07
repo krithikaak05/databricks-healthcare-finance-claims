@@ -240,10 +240,10 @@ databricks-healthcare-finance-claims/
 
 ## 🔭 Future Scope
 
-- **Turn the loss ratio into an automated alert, not just a chart someone has to check.** The pipeline already sends failure notifications (see `pipelines/lakeflow_pipeline.yml`); the same pattern could extend to business metrics, notifying the team automatically if the loss ratio crosses a set threshold, instead of waiting for someone to open the dashboard.
-- **Act on the AI classifications the pipeline already generates.** `claim_notes_enriched` already tags notes as routine, denial, appeal, or fraud_flag using `ai_query()`, but nothing currently does anything with that tag. A natural next step is routing "fraud_flag" claims into a review queue automatically.
-- **Model multi-layer reinsurance.** Right now each claim is matched to a single treaty. Real reinsurance programs often stack several layers (one treaty covers losses up to a point, a second layer covers anything above that), which would extend the existing cession logic to walk a claim through more than one layer.
-- **Turn on the row-level security that's already written but disabled.** `07_finance_reserving.sql` includes a region-based row filter, commented out because a single-user account has no groups to filter against. On a real multi-user workspace, this is a one-line change to activate.
+- Turn the loss ratio into an automated alert, not just a chart someone has to check, the pipeline already sends failure notifications (see `pipelines/lakeflow_pipeline.yml`); the same pattern could extend to business metrics, notifying the team automatically if the loss ratio crosses a set threshold, instead of waiting for someone to open the dashboard.
+- Act on the AI classifications the pipeline already generates, `claim_notes_enriched` already tags notes as routine, denial, appeal, or fraud_flag using `ai_query()`, but nothing currently does anything with that tag. A natural next step is routing "fraud_flag" claims into a review queue automatically.
+- Model multi-layer reinsurance, right now each claim is matched to a single treaty. Real reinsurance programs often stack several layers (one treaty covers losses up to a point, a second layer covers anything above that), which would extend the existing cession logic to walk a claim through more than one layer.
+- Turn on the row-level security that's already written but disabled, `07_finance_reserving.sql` includes a region-based row filter, commented out because a single-user account has no groups to filter against. On a real multi-user workspace, this is a one-line change to activate.
 - Add Lakeflow data-quality expectations (`EXPECT ... ON VIOLATION`) to every Silver table
 - A proper actuarial review of the IBNR chain-ladder methodology, which is illustrative, not filing-grade.
 
