@@ -1,6 +1,6 @@
 # 🏥 Healthcare Claims & Loss Performance Platform
 
-*End to End Healthcare Claims Pipeline with an Actuarial Reserving & Reinsurance Layer, on Databricks*
+*A Databricks project that turns health insurance claims into a live dashboard showing profitability, cost trends, and risk.*
 
 ![Databricks](https://img.shields.io/badge/Databricks-Lakehouse-FF3621?style=flat&logo=databricks&logoColor=white)
 ![Delta Lake](https://img.shields.io/badge/Delta%20Lake-Storage-00ADD8?style=flat)
@@ -30,13 +30,13 @@
 
 ## 🎯 Business Problem
 
-Health insurers run two functions that rarely share a platform: **claims operations**, which processes and adjudicates individual claims, and **finance/actuarial**, which reserves for future liability and cedes risk to reinsurers. These teams need different data (PHI-adjacent claim detail vs. treaty economics and reserve estimates), different access controls, and usually end up on separate tools entirely, making it hard for either side to see the full financial picture of the book of business in one place.
+Health insurers run two functions that rarely share a platform: **claims operations**, which processes and pays out individual claims, and **finance/actuarial**, which sets money aside for future payouts and shares some of that financial risk with other insurance companies. These two teams need different data (patient-level claim detail vs. contract terms and reserve estimates), different access controls, and usually end up on separate tools entirely, making it hard for either side to see the company's full financial picture in one place.
 
 **Use case:** A claims operations lead and a finance/actuarial analyst both need to answer questions from the same underlying data, without either seeing what the other shouldn't:
 
-1. Is the book of business profitable? What's the loss ratio, and is it trending in the right direction?
+1. Is the company collecting more in premiums than it's paying out in claims, and is that trend improving or getting worse?
 2. Which regions, specialties, or providers are driving cost, and is a cost spike a one-off event or a pattern?
-3. How much risk have we transferred to reinsurers, and how much reserve liability are we still holding?
+3. How much risk has been shifted onto other insurance companies, and how much money is still being held in reserve for claims we expect to pay later?
 
 This project demonstrates that exact workflow end to end: synthetic claims data flows through a governed medallion architecture, splits into persona-scoped Gold layers, and surfaces directly in an executive dashboard a finance lead could use to make a real underwriting or network-contracting decision. In this case, catching a 62% cost spike in one region during a three-month window, and confirming out-of-network care runs 57% more expensive per claim.
 
@@ -55,6 +55,22 @@ This is a Databricks port and extension of a Snowflake healthcare-claims portfol
 - 🤖 `ai_query()` against Databricks Foundation Model APIs for claim-note summarization and classification
 - 📊 An executive Streamlit dashboard, deployed as a Databricks App, with every insight sentence computed live from the query result, not hardcoded
 - 💰 Built and verified entirely on **Databricks Free Edition** at $0 cost. Documented in [`BUDGET_GUIDE.md`](./BUDGET_GUIDE.md)
+
+---
+
+## 📖 Plain-English Glossary
+
+A few insurance terms come up throughout this README. Quick definitions, if you don't work in insurance:
+
+| Term | Plain-English meaning |
+|---|---|
+| **Loss ratio** | Cents paid out in claims for every dollar collected in premiums. A loss ratio of 0.71 means 71 cents of every premium dollar went to claims, leaving 29 cents for expenses and profit. Above 1.0 means the company paid out more than it collected. |
+| **Reserves** | Money set aside now for claims expected to be paid later, even before the final bill arrives. |
+| **IBNR (Incurred But Not Reported)** | A specific kind of reserve for events that have already happened but haven't been filed as a claim yet, so nobody's billed for them yet. |
+| **Reinsurance** | Insurance for insurance companies. A health insurer can pass part of a large or risky claim's cost onto another company (a "reinsurer") in exchange for a fee, so no single claim can bankrupt them. |
+| **Ceding / ceded** | The act of passing that risk (and cost) to a reinsurer. "Ceded to reinsurance" = the dollar amount handed off. |
+| **Treaty** | The contract between the insurer and the reinsurer that spells out how much risk gets shared and under what terms. |
+| **PHI** | Protected Health Information, patient-level medical detail that's legally sensitive and access-controlled. |
 
 ---
 
@@ -167,7 +183,7 @@ Full diagram and the persona/access-split rationale: [`diagrams/architecture.md`
 
 From the live dashboard, computed dynamically at page-load time (numbers will vary slightly run to run, since the synthetic generator reseeds):
 
-- The book runs at an average loss ratio of **0.71**, within a healthy range, with a clear spike to **1.15** during a regional cost event in **August 2023**
+- Overall, the company collects about $1.41 in premiums for every $1 it pays out in claims (a loss ratio of **0.71**), a healthy margin, with a clear spike to **1.15** (meaning payouts briefly exceeded premium income) during a regional cost event in **August 2023**
 - **Southwest** carries the largest share of claims cost at **23%** of the total in this run
 - **Primary Care** has the highest denial rate at **16%**, a candidate for a documentation or prior-authorization review
 - Out-of-network claims cost **57% more** on average than in-network care
