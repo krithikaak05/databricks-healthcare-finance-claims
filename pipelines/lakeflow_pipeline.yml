@@ -1,0 +1,42 @@
+# lakeflow_pipeline.yml
+# Lakeflow Declarative Pipeline (formerly Delta Live Tables) definition.
+#
+# NOTE: this project's actual deployment used the newer Lakeflow Pipeline
+# Editor (source-code-in-pipeline UI) rather than deploying this file via
+# CLI/Asset Bundle -- the three SQL files below were added directly as
+# pipeline source files through that editor. This YAML is included as the
+# portable/CLI-deployable equivalent for a paid workspace or CI/CD setup.
+
+name: healthcare_claims_finance_pipeline
+
+catalog: healthcare_claims
+target: silver
+
+libraries:
+  - notebook:
+      path: ../notebooks/03_silver_transformations.sql
+  - notebook:
+      path: ../notebooks/04_gold_claims_ops.sql
+  - notebook:
+      path: ../notebooks/07_finance_reserving.sql
+
+configuration:
+  pipelines.trigger.interval: "5 minutes"
+  pipelines.enableTrackHistory: "true"
+
+clusters:
+  - label: default
+    autoscale:
+      min_workers: 1
+      max_workers: 4
+      mode: ENHANCED
+    node_type_id: "Standard_DS3_v2"
+
+continuous: false
+
+notifications:
+  - email_recipients:
+      - "data-platform-team@example.com"
+    alerts:
+      - on-update-failure
+      - on-flow-failure
