@@ -67,7 +67,7 @@
 - **Grants scale by schema, not by table.** New tables added to either schema
   inherit the right default access pattern automatically.
 
-## Real-world lessons learned building this on Databricks Free Edition
+## Notes on Databricks Free Edition (FYI for anyone rebuilding this)
 
 - **Materialized views and streaming tables are not plain Delta tables.**
   `ALTER TABLE ... CLUSTER BY`, `DESCRIBE DETAIL`, `SET MASK`, `SET ROW FILTER`,
