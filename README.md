@@ -1,247 +1,336 @@
-# 🏥 Healthcare Claims & Loss Performance Platform
+# MedSmile: Healthcare Satisfaction Monitoring System  
+*An On-Premise Data Warehouse and Business Intelligence Solution*
 
-*End to End Healthcare Claims Pipeline with an Actuarial Reserving & Reinsurance Layer, on Databricks*
-
-![Databricks](https://img.shields.io/badge/Databricks-Lakehouse-FF3621?style=flat&logo=databricks&logoColor=white)
-![Delta Lake](https://img.shields.io/badge/Delta%20Lake-Storage-00ADD8?style=flat)
-![Unity Catalog](https://img.shields.io/badge/Unity%20Catalog-Governance-00A1C9?style=flat)
-![Lakeflow](https://img.shields.io/badge/Lakeflow-Declarative%20Pipelines-FF3621?style=flat)
-![Streamlit](https://img.shields.io/badge/Streamlit-Dashboard-FF4B4B?style=flat&logo=streamlit&logoColor=white)
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat&logo=python&logoColor=white)
+![Talend](https://img.shields.io/badge/ETL-Talend-blue)  
+![PostgreSQL](https://img.shields.io/badge/Database-PostgreSQL-darkblue?logo=postgresql&logoColor=white)  
+![PowerBI](https://img.shields.io/badge/Visualization-PowerBI-yellow?logo=powerbi&logoColor=black)  
+![Status](https://img.shields.io/badge/Project-On--Premise-brightgreen)  
 
 ---
 
-## 📑 Table of Contents
+## Project Overview
 
-- [Business Problem](#-business-problem)
-- [Overview](#-overview)
-- [Dashboard](#-dashboard)
-- [Architecture](#️-architecture)
-- [Tech Stack](#️-tech-stack)
-- [Dataset](#-dataset)
-- [Pipeline Details](#️-pipeline-details)
-- [Key Insights](#-key-insights)
-- [Key Results](#-key-results)
-- [Project Structure](#-project-structure)
-- [Future Scope](#-future-scope)
-- [Deployment Note](#-deployment-note)
+MedSmile is an on-premise healthcare satisfaction monitoring system that consolidates patient surveys, hospital ratings, and operational metrics into a centralized PostgreSQL data warehouse. The system provides healthcare administrators with unified analytics capabilities to improve patient experience and facility performance through OLAP analysis and interactive dashboards.
 
 ---
 
-## 🎯 Business Problem
-
-Health insurers run two functions that rarely share a platform: **claims operations**, which processes and adjudicates individual claims, and **finance/actuarial**, which reserves for future liability and cedes risk to reinsurers. These teams need different data (PHI-adjacent claim detail vs. treaty economics and reserve estimates), different access controls, and usually end up on separate tools entirely, making it hard for either side to see the full financial picture of the book of business in one place.
-
-**Use case:** A claims operations lead and a finance/actuarial analyst both need to answer questions from the same underlying data, without either seeing what the other shouldn't:
-
-1. Is the book of business profitable? What's the loss ratio, and is it trending in the right direction?
-2. Which regions, specialties, or providers are driving cost, and is a cost spike a one-off event or a pattern?
-3. How much risk have we transferred to reinsurers, and how much reserve liability are we still holding?
-
-This project demonstrates that exact workflow end to end: synthetic claims data flows through a governed medallion architecture, splits into persona-scoped Gold layers, and surfaces directly in an executive dashboard a finance lead could use to make a real underwriting or network-contracting decision — in this case, catching a 62% cost spike in one region during a three-month window, and confirming out-of-network care runs 57% more expensive per claim.
-
----
-
-## 📘 Overview
-
-This is a Databricks port and extension of a Snowflake healthcare-claims portfolio project, built to demonstrate the same architecture decisions expressed in Databricks-native primitives, with a **finance/actuarial module** layered on top: claim reserving (case reserves + IBNR) and reinsurance ceding (excess-of-loss and quota-share treaties modeled separately, since they pay out differently).
-
-**Key Highlights:**
-
-- 🏗️ Full Bronze-Silver-Gold medallion architecture on Unity Catalog, with Gold split into two schemas by persona (Claims Ops vs. Finance/Actuarial)
-- 🔄 Lakeflow Declarative Pipelines with `APPLY CHANGES INTO` for SCD Type 1 (providers) and SCD Type 2 (members, treaties)
-- ⚡ Liquid Clustering on the claims fact table, declared inline in the materialized view definition
-- 🔐 Column-level PHI masking and a documented (though disabled-by-default, for a single-user account) row-level region filter
-- 🤖 `ai_query()` against Databricks Foundation Model APIs for claim-note summarization and classification
-- 📊 An executive Streamlit dashboard, deployed as a Databricks App, with every insight sentence computed live from the query result — not hardcoded
-- 💰 Built and verified entirely on **Databricks Free Edition** — $0 cost, documented in [`BUDGET_GUIDE.md`](./BUDGET_GUIDE.md)
+## Table of Contents
+- [Problem Definition](#problem-definition)  
+- [Business Context](#business-context)  
+- [Data Model](#data-model)  
+- [Data Warehouse Design](#data-warehouse-design)  
+- [ETL Process](#etl-process)  
+- [OLAP Operations](#olap-operations)  
+- [Power BI Analytics](#power-bi-analytics)  
+- [Future Scope](#future-scope)  
+- [Tools & Technologies](#tools--technologies)  
+- [Project Structure](#project-structure)  
+- [References](#references)  
 
 ---
 
-## 📸 Dashboard
+## Problem Definition
 
-### KPIs and Loss Ratio Trend
+Healthcare organizations manage fragmented data across multiple systems, including patient satisfaction surveys, facility ratings, and operational metrics. This fragmentation prevents:
 
-![KPIs and Loss Ratio Trend](./screenshots/dashboard_01_kpi_loss_ratio.png)
+- Holistic analysis of patient experience
+- Cross-facility performance comparisons
+- Identification of underperforming areas
+- Data-driven decision making
 
-The narrative sentence above the chart — *"average loss ratio of 0.71... highest point was 1.15 in August 2023"* — is generated from the query result at page-load time, not written by hand.
-
-### Regional and Specialty Breakdown
-
-![Regional and Specialty Breakdown](./screenshots/dashboard_02_region_specialty.png)
-
-### Network Cost and Reinsurance
-
-![Network Cost and Reinsurance](./screenshots/dashboard_03_network_reinsurance.png)
-
-> **Note on public access:** Databricks Apps cannot be made publicly viewable — anonymous, no-login sharing isn't supported on any tier. There's no live link to share here; the screenshots above are the actual, unedited output of the deployed app.
+MedSmile addresses these challenges through a centralized on-premise data warehouse that consolidates healthcare data into a single analytical platform.
 
 ---
 
-## 🏗️ Architecture
+## Business Context
 
+The system supports four core business functions:
+
+**Hospital Operations**: Centralized facility information enables optimization of staffing, capacity planning, and service delivery.
+
+**Patient Management**: Aggregated survey data supports quality monitoring, readmission tracking, and satisfaction measurement.
+
+**Patient Engagement**: Structured feedback collection enables targeted improvements in communication and service quality.
+
+**Regulatory Reporting**: Unified data infrastructure ensures consistent, auditable reporting for stakeholders and regulators.
+
+The on-premise PostgreSQL deployment supports strict data governance and healthcare compliance requirements.
+
+---
+
+## Data Model
+
+### Source Data
+
+The system integrates five primary data sources:
+
+1. Hospital_Details
+2. Location
+3. Patient_Details
+4. Survey_Details
+5. Emergency_Services
+
+Data is sourced from the [US Hospital Customer Satisfaction (2016–2020)](https://www.kaggle.com/datasets/abrambeyer/us-hospital-customer-satisfaction-20162020) dataset with supplementary manually generated columns.
+
+### Relational Schema
+
+- **Hospital_Details**: PatientID, FacilityID, Facility_Name, Phone_Number, Address, Street, City, State, Zipcode, HospitalOwnership, HospitalType
+- **Location**: LocationID, City, State, Zipcode, Address, Facility_Name
+- **Patient_Details**: PatientID, Patient_Type, Insurance_Type
+- **Survey_Details**: SurveyID, PatientID, HCAHPSMeasureID, HCAHPS_Question, HCAHPS_Answer, PatientSurveyStarRating, SurveyResponseRatePercent, NumberofCompletedSurveys
+- **Emergency_Services**: ServiceID, ServiceType, Availability, ResponseTime, Capacity
+
+### Entity Relationship Model
+
+The ERD demonstrates key relationships:
+
+- HOSPITAL connects to SURVEY via the HAS relationship
+- SURVEY links to SURVEY_DATES through CONDUCTS
+- HOSPITAL_RATING captures performance across multiple dimensions
+- HOSPITAL receives ratings through CAN_RECEIVE
+- Patients participate via COORRESPONDS relationship
+
+---
+
+## Data Warehouse Design
+
+The data warehouse implements a star schema in PostgreSQL.
+
+### Fact Table: Survey_Fact
+
+**Keys**: SurveyFactID (PK), SurveyID, PatientID, LocationID, ServiceID, FacilityID (FKs)
+
+**Measures**: AvgPatientSurveyStarRating, AvgSurveyResponseRatePercent, TotalCompletedSurveys
+
+### Dimension Tables
+
+1. **Hospital_Dimension**: FacilityID, Facility_Name, Phone_Number, Address, City, State, HospitalOwnership, HospitalType
+
+2. **Survey_Dimension**: SurveyID, HCAHPSMeasureID, HCAHPS_Question, HCAHPS_Answer, PatientSurveyStarRating, SurveyResponseRatePercent, NumberofCompletedSurveys, LocationID, FacilityID, PatientID, ServiceID
+
+3. **Location_Dimension**: LocationID, City, County, State, Zipcode, Address, Facility_Name
+
+4. **Patient_Dimension**: PatientID, Patient_Type, Insurance_Type
+
+5. **Emergency_Services_Dimension**: ServiceID, ServiceType, Availability, ResponseTime, Capacity
+
+### Slowly Changing Dimensions
+
+SCD Type 1 is implemented for Facility_Name, HospitalType, and HospitalOwnership attributes. Current values overwrite historical data to maintain current facility information.
+
+---
+
+## ETL Process
+
+ETL operations are implemented in Talend Open Studio, connecting to PostgreSQL via JDBC.
+
+### Dimension Loading
+
+Source tables undergo transformation and loading:
+- Hospital_Details → Hospital_Dimension
+- Location → Location_Dimension
+- Patient_Details → Patient_Dimension
+- Survey_Details → Survey_Dimension
+- Emergency_Services → Emergency_Services_Dimension
+
+**Transformations Applied**:
+- Text trimming and quote removal
+- Boolean conversion (YES/NO → 1/0)
+- NULL value handling
+- Data type conversions
+
+### Fact Table Population
+
+Dimension data is joined using tMap components and loaded into Survey_Fact. Aggregate measures including TotalCompletedSurveys and AveragePatientSurveyStarRating are calculated during the ETL process.
+
+---
+
+## OLAP Operations
+
+The data warehouse supports standard OLAP analytical operations:
+
+1. **Roll-Up**: Average survey rating aggregated by state and facility
+2. **Drill-Across**: Survey completion counts correlated with rating averages
+3. **Slice**: Identification of facilities with ratings below 3 and response rates under 50%
+4. **Roll-Up**: Emergency service availability by geographic region
+5. **Drill-Down**: Temporal analysis of survey trends by quarter or year
+6. **Roll-Up**: Survey volume aggregation by city and hospital type
+
+---
+
+## Power BI Analytics
+
+### Dashboard Overview
+
+The Power BI dashboard provides real-time analytics through direct connection to the PostgreSQL data warehouse.
+
+### Key Performance Indicators
+
+- **Average Star Rating**: 0.73 - Overall patient satisfaction metric
+- **Positive Surveys Percentage**: 6.19% - Proportion of favorable responses
+- **Total Surveys**: 71K - Completed patient feedback volume
+- **Weighted Response Rate**: 30.64 - Response rate adjusted for survey complexity
+- **Facility Satisfaction Score**: 3.24 - Composite performance metric
+
+### Visualizations
+
+**Survey Scores Analysis**: Stacked bar chart comparing patient types (Emergency, Inpatient, Observation, Outpatient) across insurance categories.
+
+**Geographic Distribution**: Horizontal bar chart displaying facility distribution across all 50 U.S. states.
+
+**Location Performance**: Multi-ring donut chart showing survey volumes and positive feedback percentages by location ID.
+
+**Interactive Q&A**: Natural language query interface enabling ad-hoc data exploration.
+
+### Analytical Capabilities
+
+- Cross-dimensional analysis of patient demographics and satisfaction
+- Geographic performance benchmarking
+- Time-series trend analysis
+- Facility-level comparative assessment
+- Insurance type impact evaluation
+
+### Technical Implementation
+
+- Direct query mode for real-time data access
+- Scheduled refresh capability
+- Row-level security for multi-facility environments
+- Optimized aggregations for performance
+- Mobile-responsive design
+
+---
+
+## Future Scope
+
+### Hospital Rating Expansion
+
+Implementation of additional rating dimensions identified in the ERD:
+- Patient Experience Rating
+- Timeliness of Care Rating
+- Effectiveness of Caring Rating
+- Safety of Care Rating
+- Mortality Rating
+- Readmission Rating
+- Efficient Use of Medical Imaging Rating
+
+### Temporal Analytics Enhancement
+
+Integration of the SURVEY_DATES entity for:
+- Hierarchical time dimensions (Year, Quarter, Month)
+- Time-series analysis
+- Seasonal trend identification
+- Longitudinal performance tracking
+
+### Historical Tracking
+
+Migration from SCD Type 1 to Type 2 for:
+- Ownership transition analysis
+- Facility type change tracking
+- Organizational impact assessment
+- Compliance audit trails
+
+### Advanced Analytics
+
+- Predictive modeling for patient satisfaction
+- Natural language processing of survey comments
+- Statistical process control for performance monitoring
+- Machine learning-based risk prediction
+
+### Data Integration
+
+- Electronic Health Records (EHR) connectivity
+- Financial data integration
+- External benchmarking sources (CMS Hospital Compare)
+- Real-time data streaming capabilities
+
+### Enhanced Governance
+
+- Expanded HIPAA compliance measures
+- Automated data quality framework
+- Advanced role-based access control
+- Comprehensive audit logging
+
+### Platform Enhancements
+
+- Cloud migration path for scalability
+- Real-time alert system
+- Mobile application development
+- Self-service BI capabilities
+
+---
+
+## Tools & Technologies
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| ETL | Talend Open Studio | Data extraction, transformation, and loading |
+| Database | PostgreSQL | Data warehouse and OLAP operations |
+| Visualization | Power BI | Interactive dashboards and reporting |
+| Modeling | Star Schema | Dimensional data warehouse design |
+
+---
+
+## Project Structure
+
+```plaintext
+MedSmile_Healthcare_Satisfaction_Monitoring/
+│
+├── Data/
+│   ├── Input_data/
+│   │   ├── EmergencyServices.csv
+│   │   ├── Hospital.csv
+│   │   ├── Location.csv
+│   │   ├── Patient.csv
+│   │   └── Survey.csv
+│   │
+│   ├── MainDataset/
+│   │   └── MainDataset.csv.zip
+│   │
+│   └── Output_data/
+│       ├── EmergencyService_Dimension.csv
+│       ├── HospitalDimensions.csv
+│       ├── LocationDimensions.csv
+│       ├── PatientDimension.csv
+│       ├── SurveyTableDimension.csv
+│       └── survey_fact_table_20241130001.csv
+│
+├── DimensionTables/
+│   ├── EmergencyServicesDetails_ERDimension.item
+│   ├── EmergencyServicesDetails_ERDimension.properties
+│   ├── HospitalDetails_HospitalDimension.item
+│   ├── HospitalDetails_HospitalDimension.properties
+│   ├── LocationTableToLocationDim_0.1.item
+│   ├── LocationTableToLocationDim_0.1.properties
+│   ├── PatientTable_PatientDim_0.1.item
+│   ├── PatientTable_PatientDim_0.1.properties
+│   ├── SurveyTableDetailsToSurveyTable.item
+│   └── SurveyTableDetailsToSurveyTable.properties
+│
+├── FactTables/
+│   ├── DimensionTablesToSurveyFact_0.1.item
+│   └── DimensionTablesToSurveyFact_0.1.properties
+│
+├── CONCEPTUAL_DATA_WAREHOUSE.pdf
+├── ERD_DIAGRAM.png
+├── MedSmile_Queries.sql
+├── MedSmileHealthcareSatisfactionMonitoringSystem_OnPremise.pdf
+└── README.md
 ```
-Source Systems (claims engine, enrollment, provider directory,
-adjuster notes, reinsurance treaty register, premium billing)
-       │
-       ▼
-Unity Catalog Volume (landing zone)  ──►  Auto Loader (cloudFiles)
-       │
-       ▼
-Bronze Layer  ──►  8 raw tables, schema-on-read
-       │
-       ▼
-Lakeflow Silver Layer  ──►  claims_staging, members_scd2 (SCD2),
-                            providers_current (SCD1), claim_status_current,
-                            reinsurance_treaties (SCD2), premium_ledger
-       │
-       ▼
-Gold — Claims Ops              Gold — Finance / Actuarial
-claims_fact (clustered,        reserves_fact, reinsurance_cession_fact,
-PHI-masked), provider          loss_ratio_mart, combined_ratio_mart
-performance, ai_query notes    (separate schema, separate grants)
-       │
-       ▼
-Streamlit Dashboard (Databricks App)
-```
-
-Full diagram and the persona/access-split rationale: [`diagrams/architecture.md`](./diagrams/architecture.md).
 
 ---
 
-## 🛠️ Tech Stack
+## References
 
-| Layer | Technology |
-|---|---|
-| Storage & table format | Delta Lake |
-| Governance & catalog | Unity Catalog (schemas, column masks, lineage) |
-| Ingestion | Auto Loader (`cloudFiles`) |
-| Transformation | Lakeflow Declarative Pipelines, PySpark |
-| Compute | Databricks Serverless SQL Warehouse |
-| AI / LLM | `ai_query()` against Databricks Foundation Model APIs |
-| Visualization | Streamlit, deployed as a Databricks App |
-| Language | Python 3.11, SQL |
+1. [US Hospital Customer Satisfaction Dataset](https://www.kaggle.com/datasets/abrambeyer/us-hospital-customer-satisfaction-20162020) - Kaggle
+2. [HCAHPS Survey Information](https://www.cms.gov/Medicare/Quality-Initiatives-Patient-Assessment-Instruments/HospitalQualityInits/HospitalHCAHPS) - CMS
+3. [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+4. [Talend Open Studio Documentation](https://www.talend.com/products/talend-open-studio/)
+5. [Power BI Documentation](https://docs.microsoft.com/en-us/power-bi/)
 
 ---
 
-## 📦 Dataset
+**Author**: Krithika Ravishankar  
+**Institution**: Northeastern University  
+**Program**: Enterprise Project Management & Data Visualization
 
-- **Source:** fully synthetic, generated by [`data_generator.py`](./data_generator.py) — no real PHI, ever
-- **Size (at `--scale 0.001`, the budget-friendly default):** ~7,200 claims, ~690 member-plan-event rows, 25 providers, ~26,500 premium transactions
-- **Calibration, not just randomness:** claim amounts, premium levels, and denial rates are deliberately calibrated against each other so the resulting loss ratio lands in a realistic ~0.65–0.85 band, rather than being arbitrary
-
-> Three signals are deliberately built into the generator so the dashboard has real, explainable patterns to surface: a regional cost spike (Southeast/Southwest region, Q3 2023 — a "flu season" story, ~1.8x severity and ~2.2x frequency), specialty-level denial rate variation, and an out-of-network cost multiplier (~1.6x). None of these are hardcoded into the dashboard's text — every insight sentence is computed from whatever the data actually shows on a given run.
-
----
-
-## ⚙️ Pipeline Details
-
-### Bronze Layer
-
-- Auto Loader (`cloudFiles`) reads parquet files from a Unity Catalog Volume landing zone into 8 Bronze tables
-- Schema-on-read with a `_rescued_data` column, so upstream schema drift never breaks ingestion
-- `.trigger(availableNow=True)` — processes whatever's currently landed, then stops cleanly
-
-### Silver Layer
-
-- `claims_staging`: typed, append-only streaming table (no CDC needed — Bronze claims are insert-only)
-- `members_scd2`: `APPLY CHANGES INTO ... STORED AS SCD TYPE 2` — a claim must be judged against the plan a member had on the date of service, so history matters
-- `providers_current`: `STORED AS SCD TYPE 1` — no history needed, network status just changes in place
-- `reinsurance_treaties`: SCD Type 2 — a cession must use the treaty terms in force on the claim date, not this year's renegotiated terms
-
-### Gold Layer — Claims Ops
-
-- `claims_fact`: the joined, curated fact table — Liquid Clustered on `(claim_date, provider_id)`, with `diagnosis_code` masked inline in the `SELECT` (PHI protection)
-- `provider_performance_mart`: denial rate and billed amount by provider
-- `claim_notes_enriched`: `ai_query()`-generated summaries and category classifications of adjuster notes
-
-### Gold Layer — Finance / Actuarial
-
-- `reserves_fact`: case reserve + IBNR at a `(claim, valuation_date)` grain — modeled as its own fact table since reserves are re-estimated periodically, not a static claim attribute
-- `reinsurance_cession_fact`: excess-of-loss and quota-share modeled with genuinely different formulas, since they pay out differently
-- `loss_ratio_mart` / `combined_ratio_mart`: incurred losses and earned premium are aggregated independently, then joined by period, so the ratio reflects true population-level totals
-
----
-
-## 🔎 Key Insights
-
-From the live dashboard, computed dynamically at page-load time (numbers will vary slightly run to run, since the synthetic generator reseeds):
-
-- The book runs at an average loss ratio of **0.71**, within a healthy range, with a clear spike to **1.15** during a regional cost event in **August 2023**
-- **Southwest** carries the largest share of claims cost at **23%** of the total in this run
-- **Primary Care** has the highest denial rate at **16%** — a candidate for a documentation or prior-authorization review
-- Out-of-network claims cost **57% more** on average than in-network care
-- **9.4%** of incurred losses have been transferred to reinsurers, reducing net retained risk
-
----
-
-## 📈 Key Results
-
-| Metric | Value |
-|---|---|
-| Total Claims | 7,202 |
-| Total Incurred | $6,140,720 |
-| Ceded to Reinsurance | $574,198 |
-| Total Reserves Held | $1,680,983 |
-| Average Loss Ratio | 0.71 |
-| Peak Loss Ratio | 1.15 (Aug 2023) |
-| Highest-Cost Region | Southwest (23% of total) |
-| Highest Denial Rate | Primary Care (16%) |
-| Out-of-Network Cost Premium | +57% vs. in-network |
-
----
-
-## 📂 Project Structure
-
-```
-databricks-healthcare-finance-claims/
-├── README.md
-├── BUDGET_GUIDE.md
-├── data_generator.py
-├── screenshots/
-│   ├── dashboard_01_kpi_loss_ratio.png
-│   ├── dashboard_02_region_specialty.png
-│   └── dashboard_03_network_reinsurance.png
-├── notebooks/
-│   ├── 01_setup_catalog_schemas.sql
-│   ├── 02_bronze_ingestion.py
-│   ├── 03_silver_transformations.sql
-│   ├── 04_gold_claims_ops.sql
-│   ├── 05_liquid_clustering_perf.sql
-│   ├── 06_unity_catalog_governance.sql
-│   ├── 07_finance_reserving.sql
-│   ├── 07b_finance_reserving_pyspark.py
-│   ├── 08_ai_query_claim_notes.sql
-│   ├── 09_cost_monitoring_finops.sql
-│   └── 10_time_travel_cloning.sql
-├── pipelines/
-│   └── lakeflow_pipeline.yml
-├── diagrams/
-│   └── architecture.md
-└── streamlit_dashboard/
-    ├── app.py
-    ├── app.yaml
-    └── requirements.txt
-```
-
----
-
-## 🔭 Future Scope
-
-- Surface the `ibnr_by_service_month` table (built in `07b_finance_reserving_pyspark.py`, computed but not yet visualized) as a reserve-development chart on the dashboard
-- Regenerate the synthetic dataset at a larger `--scale` to give every specialty a statistically stable sample size — the current small-sample run occasionally shows noisy denial rates for lower-volume specialties
-- Add Lakeflow data-quality expectations (`EXPECT ... ON VIOLATION`) to every Silver table
-- Real Unity Catalog groups and enabled row-level security on the finance marts — not provisionable on a single-user Free Edition account, but fully designed and documented
-- A proper actuarial review of the IBNR chain-ladder methodology, which is illustrative, not filing-grade
-
----
-
-## 📌 Deployment Note
-
-This project is designed to run entirely on **Databricks Free Edition** at zero cost. Generate synthetic data locally (`python data_generator.py --out ./synthetic_data --scale 0.001`), upload it to a Unity Catalog Volume, then work through the notebooks in `notebooks/` in numbered order. The Streamlit dashboard deploys as a Databricks App from the `streamlit_dashboard/` folder, with a SQL Warehouse resource attached.
-
-Full step-by-step budget guidance: [`BUDGET_GUIDE.md`](./BUDGET_GUIDE.md).
-
----
-
-*Built with Databricks · Delta Lake · Unity Catalog · Lakeflow Declarative Pipelines · PySpark · Streamlit · Databricks Apps*
+*Last Updated: November 2024*
