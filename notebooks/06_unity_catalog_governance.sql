@@ -3,7 +3,7 @@
 -- Direct replacement for Snowflake RBAC + dynamic data masking + row
 -- access policies.
 --
--- IMPORTANT LESSON LEARNED: column masks and row filters attached via
+-- NOTE: column masks and row filters attached via
 -- ALTER TABLE ... SET MASK / SET ROW FILTER only work on plain Delta
 -- tables, NOT on Lakeflow-managed materialized views or streaming tables
 -- (they enforce a "must be a table" restriction, the same one hit with

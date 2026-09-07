@@ -1,7 +1,7 @@
 -- 05_liquid_clustering_perf.sql
 -- Liquid Clustering verification -- the centerpiece performance decision.
 --
--- IMPORTANT LESSON LEARNED: claims_fact is a Lakeflow-managed materialized
+-- NOTE: claims_fact is a Lakeflow-managed materialized
 -- view, not a plain Delta table. ALTER TABLE ... CLUSTER BY and
 -- DESCRIBE DETAIL both fail on it with EXPECT_TABLE_NOT_VIEW errors.
 -- Liquid Clustering is instead declared directly inside the view's CREATE

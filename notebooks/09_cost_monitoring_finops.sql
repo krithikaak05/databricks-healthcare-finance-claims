@@ -10,12 +10,10 @@
 
 -- ============================================================
 -- Most expensive queries this week
--- warehouse_id lives inside the "compute" struct, not as a top-level
--- column, and the user column is "executed_by" per current docs.
 -- ============================================================
 SELECT
   statement_text,
-  compute.warehouse_id AS warehouse_id,
+  warehouse_id,
   executed_by,
   total_duration_ms / 1000.0 AS total_duration_sec,
   read_bytes,
@@ -41,17 +39,10 @@ ORDER BY usage_date DESC, dbus DESC;
 -- Idle / misconfigured cluster detection -- clusters with no
 -- auto-termination set are the #1 cause of runaway lakehouse spend, same
 -- as an oversized always-on Snowflake warehouse.
--- LESSON LEARNED: the column is auto_termination_minutes (underscore
--- between "auto" and "termination"), and node_type_id doesn't exist on
--- Free Edition's serverless-only compute schema -- system table schemas
--- vary meaningfully by workspace tier, so verify with DESCRIBE before
--- assuming a fixed column list.
 -- ============================================================
-SELECT cluster_id, cluster_name, auto_termination_minutes
+SELECT cluster_id, cluster_name, autotermination_minutes, node_type_id
 FROM system.compute.clusters
-WHERE auto_termination_minutes IS NULL OR auto_termination_minutes = 0;
--- An empty result here is expected and fine on Free Edition -- serverless-
--- only compute means there are no misconfigured classic clusters to flag.
+WHERE autotermination_minutes IS NULL OR autotermination_minutes = 0;
 
 -- ============================================================
 -- Lakeflow pipeline run cost/duration -- catch a pipeline whose refresh
